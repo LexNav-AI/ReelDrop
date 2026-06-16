@@ -226,6 +226,19 @@
   .acct-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-top:14px;}
   .acct-val{font-size:15px;font-weight:600;color:var(--ink);margin-top:4px;word-break:break-all;}
   .acct-logout{width:100%;background:transparent;border:1.5px solid var(--line);color:#FF7B72;font-family:inherit;font-weight:800;font-size:15px;padding:14px;border-radius:13px;margin-top:18px;cursor:pointer;}
+  .acct-card{max-width:420px;max-height:88vh;overflow-y:auto;}
+  .acct-head{display:flex;justify-content:space-between;align-items:center;position:sticky;top:-30px;background:var(--card);padding:6px 0 8px;z-index:2;}
+  .acct-sec{border-top:1px solid var(--line);margin-top:18px;padding-top:16px;}
+  .acct-sec-t{font-weight:800;font-size:15.5px;color:var(--ink);margin-bottom:6px;}
+  .acct-btn2{width:100%;background:var(--bg2);border:1.5px solid var(--line);color:var(--ink);font-family:inherit;font-weight:700;font-size:14.5px;padding:13px;border-radius:12px;margin-top:10px;cursor:pointer;}
+  .acct-delete{width:100%;background:transparent;border:none;color:var(--muted);font-family:inherit;font-weight:700;font-size:12.5px;margin-top:12px;cursor:pointer;text-decoration:underline;}
+  .acct-orders{margin-top:6px;}
+  .acct-empty{color:var(--muted);font-size:13.5px;}
+  .acct-order{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:11px 12px;margin-top:8px;}
+  .ao-top{display:flex;justify-content:space-between;align-items:baseline;}
+  .ao-total{font-weight:800;font-size:15px;}
+  .ao-status{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--gold);}
+  .ao-sub{font-size:12px;color:var(--muted);margin-top:3px;}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -286,20 +299,43 @@
 </header>
 
 <div id="accountScreen" class="auth-gate">
-  <div class="auth-card" style="text-align:left">
-    <div style="display:flex;justify-content:space-between;align-items:center">
+  <div class="auth-card acct-card" style="text-align:left">
+    <div class="acct-head">
       <div class="auth-logo" style="font-size:24px">Account</div>
       <button id="acctClose" class="auth-show" style="margin:0">Close</button>
     </div>
-    <p class="acct-lbl">Email</p>
-    <p id="acctEmail" class="acct-val"></p>
-    <p class="acct-lbl">Name</p>
-    <input id="acctName" type="text" placeholder="Your name">
-    <p class="acct-lbl">Phone</p>
-    <input id="acctPhone" type="tel" placeholder="Your phone">
-    <button id="acctSave" class="auth-submit">Save changes</button>
-    <p id="acctMsg" class="auth-msg"></p>
-    <button id="acctLogout" class="acct-logout">Log out</button>
+    <div class="acct-sec">
+      <p class="acct-sec-t">Profile</p>
+      <p class="acct-lbl">Name</p>
+      <input id="acctName" type="text" placeholder="Your name">
+      <p class="acct-lbl">Phone</p>
+      <input id="acctPhone" type="tel" placeholder="Your phone">
+      <button id="acctSave" class="auth-submit">Save profile</button>
+      <p id="acctMsg" class="auth-msg"></p>
+    </div>
+    <div class="acct-sec">
+      <p class="acct-sec-t">Email</p>
+      <p class="acct-lbl">Current</p>
+      <p id="acctEmail" class="acct-val"></p>
+      <input id="acctNewEmail" type="email" placeholder="New email">
+      <button id="acctEmailBtn" class="acct-btn2">Change email</button>
+      <p id="acctEmailMsg" class="auth-msg"></p>
+    </div>
+    <div class="acct-sec">
+      <p class="acct-sec-t">Security</p>
+      <input id="acctNewPass" type="password" placeholder="New password">
+      <input id="acctNewPass2" type="password" placeholder="Confirm new password">
+      <button id="acctPassBtn" class="acct-btn2">Change password</button>
+      <p id="acctPassMsg" class="auth-msg"></p>
+    </div>
+    <div class="acct-sec">
+      <p class="acct-sec-t">Order history</p>
+      <div id="acctOrders" class="acct-orders"><p class="acct-empty">No orders yet.</p></div>
+    </div>
+    <div class="acct-sec">
+      <button id="acctLogout" class="acct-logout">Log out</button>
+      <button id="acctDelete" class="acct-delete">Delete my account</button>
+    </div>
   </div>
 </div>
 <main>
@@ -591,7 +627,21 @@ document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
 
 // ---------- auth + operator (Supabase) ----------
 let sb=null,currentUser=null,currentProfile=null,isOp=false,opOnline=true,signupMode=false;
-function openAccount(){if(!sb||!currentUser)return;$('acctEmail').textContent=currentUser.email||'';$('acctName').value=(currentProfile&&currentProfile.full_name)||'';$('acctPhone').value=(currentProfile&&currentProfile.phone)||'';$('acctMsg').textContent='';$('accountScreen').style.display='flex';}
+function openAccount(){if(!sb||!currentUser)return;
+  $('acctEmail').textContent=currentUser.email||'';
+  $('acctName').value=(currentProfile&&currentProfile.full_name)||'';
+  $('acctPhone').value=(currentProfile&&currentProfile.phone)||'';
+  ['acctMsg','acctEmailMsg','acctPassMsg'].forEach(i=>$(i).textContent='');
+  $('acctNewEmail').value='';$('acctNewPass').value='';$('acctNewPass2').value='';
+  $('accountScreen').style.display='flex';loadOrders();}
+async function loadOrders(){
+  const box=$('acctOrders');box.innerHTML='<p class="acct-empty">Loading…</p>';
+  const{data,error}=await sb.from('orders').select('id,created_at,status,grand_total,shop_region').eq('customer_id',currentUser.id).order('created_at',{ascending:false}).limit(25);
+  if(error||!data||!data.length){box.innerHTML='<p class="acct-empty">No orders yet.</p>';return;}
+  box.innerHTML=data.map(o=>{
+    const d=new Date(o.created_at).toLocaleDateString([], {month:'short',day:'numeric',year:'numeric'});
+    return `<div class="acct-order"><div class="ao-top"><span class="ao-total">$${(+o.grand_total||0).toFixed(2)}</span><span class="ao-status">${o.status}</span></div><div class="ao-sub">${d} \u00b7 ${o.shop_region||''}</div></div>`;
+  }).join('');}
 function closeAccount(){$('accountScreen').style.display='none';}
 function pwValid(p){return p.length>=8&&/[A-Z]/.test(p)&&/[0-9]/.test(p)&&/[^A-Za-z0-9]/.test(p);}
 function renderAuthMode(){
@@ -664,6 +714,23 @@ async function initAuth(){
     const{error}=await sb.from('profiles').update({full_name:$('acctName').value.trim(),phone:$('acctPhone').value.trim()}).eq('id',currentUser.id);
     if(error){$('acctMsg').textContent=error.message;return;}
     currentProfile.full_name=$('acctName').value.trim();currentProfile.phone=$('acctPhone').value.trim();$('acctMsg').textContent='Saved.';});
+  $('acctEmailBtn').addEventListener('click',async()=>{
+    const ne=$('acctNewEmail').value.trim();
+    if(!ne){$('acctEmailMsg').textContent='Enter a new email.';return;}
+    const{error}=await sb.auth.updateUser({email:ne});
+    $('acctEmailMsg').textContent=error?error.message:'Check both inboxes to confirm the change.';});
+  $('acctPassBtn').addEventListener('click',async()=>{
+    const p=$('acctNewPass').value,p2=$('acctNewPass2').value;
+    if(!pwValid(p)){$('acctPassMsg').textContent='8+ chars, 1 capital, 1 number, 1 symbol.';return;}
+    if(p!==p2){$('acctPassMsg').textContent='Passwords do not match.';return;}
+    const{error}=await sb.auth.updateUser({password:p});
+    $('acctPassMsg').textContent=error?error.message:'Password updated.';
+    if(!error){$('acctNewPass').value='';$('acctNewPass2').value='';}});
+  $('acctDelete').addEventListener('click',async()=>{
+    if(!confirm('Delete your account and all your orders? This cannot be undone.'))return;
+    const{error}=await sb.rpc('delete_my_account');
+    if(error){alert(error.message);return;}
+    await sb.auth.signOut();alert('Your account has been deleted.');});
 }
 
 buildCatalog();
